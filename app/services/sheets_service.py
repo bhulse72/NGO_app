@@ -147,20 +147,64 @@ def save_client(client: Client):
 def load_all_clients():
     client_sheet = get_sheet("Clients")
     client_rows = {row["contact_id"]: row for row in client_sheet.get_all_records()}
+
+    # Load notes grouped by contact_id
+    notes_sheet = get_sheet("Notes")
+    note_rows = notes_sheet.get_all_records()
+    notes_by_id = {}
+    for row in note_rows:
+        cid = row["contact_id"]
+        if cid not in notes_by_id:
+            notes_by_id[cid] = []
+        note = Note(
+            author=row["author"],
+            text=row["text"],
+            attachments=row["attachments"].split(",") if row["attachments"] else []
+        )
+        note.created_at = datetime.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")
+        notes_by_id[cid].append(note)
+
+    # Load related people grouped by contact_id
+    related_sheet = get_sheet("Related_People")
+    related_rows = related_sheet.get_all_records()
+    related_by_id = {}
+    for row in related_rows:
+        cid = row["contact_id"]
+        if cid not in related_by_id:
+            related_by_id[cid] = []
+        related_by_id[cid].append(RelatedPerson(
+            name=row["name"],
+            relationship=row["relationship"],
+            phone=row["phone"] or None,
+            address=row["address"] or None
+        ))
+
     contacts = load_all_contacts()
     clients = []
     for contact in contacts:
         if contact.contact_id in client_rows:
             row = client_rows[contact.contact_id]
             client = Client(
+                contact_id=contact.contact_id,
+                name=contact.name,
+                date_of_birth=contact.date_of_birth,
+                phone=contact.phone,
+                address=contact.address,
+                referral_source=contact.referral_source,
+                referral_date=contact.referral_date,
+                referral_description=contact.referral_description,
+                added_by=contact.added_by,
+                photo=contact.photo,
                 assigned_to=row["assigned_to"],
-                inactivity_days=int(row["inactivity_days"]),
-                **contact.__dict__  # pass all contact fields up
+                inactivity_days=int(row["inactivity_days"])
             )
             client.risk_level = row["risk_level"]
             client.is_active = row["is_active"] == "True"
             client.client_since = datetime.strptime(row["client_since"], "%Y-%m-%d %H:%M:%S")
             client.last_activity_date = datetime.strptime(row["last_activity_date"], "%Y-%m-%d %H:%M:%S")
+            client.related_people = related_by_id.get(contact.contact_id, [])
+            client.contact_attempts = contact.contact_attempts
+            client.notes = notes_by_id.get(contact.contact_id, [])
             clients.append(client)
     return clients
 
