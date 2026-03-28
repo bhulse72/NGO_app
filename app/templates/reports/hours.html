@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Hours Report — GVI NGO{% endblock %}
+{% block page_title %}Report by Hours{% endblock %}
+
+{% block topbar_actions %}
+<a href="/reports/hours?period={{ period }}&format=pdf" class="btn btn-primary">⬇ Download PDF</a>
+{% endblock %}
+
+{% block extra_styles %}
+.period-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.period-tab {
+    padding: 7px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--text-muted);
+    background: var(--card);
+    transition: all 0.15s;
+}
+
+.period-tab:hover { border-color: var(--accent); color: var(--accent); }
+.period-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.report-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+}
+
+.summary-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.summary-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.bar-wrap { margin-bottom: 16px; }
+
+.bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+}
+
+.bar-label { font-size: 0.875rem; font-weight: 500; }
+.bar-value { font-size: 0.8rem; color: var(--text-muted); }
+
+.bar-track {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.bar-fill.worker { background: var(--sidebar); }
+
+.pct-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+{% endblock %}
+
+{% block content %}
+
+<div class="period-tabs">
+    <a href="/reports/hours?period=week" class="period-tab {{ 'active' if period == 'week' else '' }}">This Week</a>
+    <a href="/reports/hours?period=month" class="period-tab {{ 'active' if period == 'month' else '' }}">This Month</a>
+    <a href="/reports/hours?period=year" class="period-tab {{ 'active' if period == 'year' else '' }}">This Year</a>
+    <a href="/reports/hours?period=all" class="period-tab {{ 'active' if period == 'all' else '' }}">All Time</a>
+</div>
+
+<div class="report-summary">
+    <div class="summary-card">
+        <div class="summary-label">Total Hours</div>
+        <div class="summary-value">{{ total_hours | round(1) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Log Entries</div>
+        <div class="summary-value">{{ log_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Categories Used</div>
+        <div class="summary-value">{{ category_totals | length }}</div>
+    </div>
+</div>
+
+<div class="reports-grid">
+    <!-- By category -->
+    <div class="card">
+        <div class="card-title">Hours by Category</div>
+        {% if category_totals %}
+            {% for cat, hrs in category_totals.items() %}
+            <div class="bar-wrap">
+                <div class="bar-header">
+                    <span class="bar-label">{{ cat }}</span>
+                    <span class="bar-value">{{ hrs }}h</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: {{ (hrs / total_hours * 100) | round if total_hours else 0 }}%"></div>
+                </div>
+                <div class="pct-label">{{ ((hrs / total_hours) * 100) | round(1) if total_hours else 0 }}% of total</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: var(--text-muted); font-size: 0.875rem;">No data for this period.</p>
+        {% endif %}
+    </div>
+
+    <!-- By worker -->
+    <div class="card">
+        <div class="card-title">Hours by Worker</div>
+        {% if worker_totals %}
+            {% set max_hrs = worker_totals.values() | max %}
+            {% for worker, hrs in worker_totals.items() %}
+            <div class="bar-wrap">
+                <div class="bar-header">
+                    <span class="bar-label">{{ worker }}</span>
+                    <span class="bar-value">{{ hrs }}h</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill worker" style="width: {{ (hrs / max_hrs * 100) | round }}%"></div>
+                </div>
+                <div class="pct-label">{{ ((hrs / total_hours) * 100) | round(1) if total_hours else 0 }}% of total</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: var(--text-muted); font-size: 0.875rem;">No data for this period.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
