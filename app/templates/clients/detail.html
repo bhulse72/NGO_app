@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.name }} — GVI NGO{% endblock %}
+{% block page_title %}{{ client.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/clients/" class="btn btn-outline">← Back to Clients</a>
+{% endblock %}
+
+{% block extra_styles %}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.info-value { font-size: 0.9rem; }
+
+.note {
+    padding: 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--accent);
+}
+
+.note-text { font-size: 0.875rem; line-height: 1.5; }
+
+.note-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.related-person {
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.related-person strong { font-size: 0.875rem; }
+.related-person p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+.risk-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.risk-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 0.85rem;
+    background: var(--card);
+    transition: all 0.15s;
+}
+
+.risk-option:hover { border-color: var(--accent); }
+.risk-option.selected { border-color: var(--accent); background: #fef3ec; font-weight: 500; }
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+    <!-- Left column -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Basic info -->
+        <div class="card">
+            <div class="card-title">Client Information</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px;">
+                <div class="info-row">
+                    <span class="info-label">Full Name</span>
+                    <span class="info-value">{{ client.name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date of Birth</span>
+                    <span class="info-value">{{ client.date_of_birth.strftime('%b %d, %Y') if client.date_of_birth else '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">{{ client.phone or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Address</span>
+                    <span class="info-value">{{ client.address or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Referral Source</span>
+                    <span class="info-value">{{ client.referral_source or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Client Since</span>
+                    <span class="info-value">{{ client.client_since.strftime('%b %d, %Y') if client.client_since else '—' }}</span>
+                </div>
+                <div class="info-row" style="grid-column: span 2;">
+                    <span class="info-label">Reason for Referral</span>
+                    <span class="info-value">{{ client.referral_description or '—' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card">
+            <div class="card-title">Notes</div>
+            {% if client.notes %}
+                {% for note in client.get_notes() %}
+                <div class="note">
+                    <div class="note-text">{{ note.text }}</div>
+                    <div class="note-meta">
+                        By {{ note.author }} · {{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        {% if note.attachments %}
+                            · 📎 {{ note.attachments | length }} attachment(s)
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No notes yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Status card -->
+        <div class="card">
+            <div class="card-title">Case Status</div>
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                {% if client.is_active %}
+                    <span class="badge badge-active">Active</span>
+                {% else %}
+                    <span class="badge badge-inactive">Inactive</span>
+                {% endif %}
+            </div>
+            <div class="info-row">
+                <span class="info-label">Assigned To</span>
+                <span class="info-value">{{ client.assigned_to or '—' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Activity</span>
+                <span class="info-value">{{ client.last_activity_date.strftime('%b %d, %Y') if client.last_activity_date else '—' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Inactivity Threshold</span>
+                <span class="info-value">{{ client.inactivity_days }} days</span>
+            </div>
+        </div>
+
+        <!-- Risk level -->
+        <div class="card">
+            <div class="card-title">Risk Level</div>
+            <div class="risk-selector">
+                {% for level in ["Not at risk", "Low risk", "High risk", "Needs urgent help", "Threat to others", "Threat to themselves"] %}
+                <div class="risk-option {{ 'selected' if client.risk_level == level else '' }}">
+                    {% if level == "Needs urgent help" %}🔴
+                    {% elif level == "High risk" or "Threat" in level %}🟠
+                    {% elif level == "Low risk" %}🟡
+                    {% else %}🟢
+                    {% endif %}
+                    {{ level }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Related people -->
+        <div class="card">
+            <div class="card-title">Related People</div>
+            {% if client.related_people %}
+                {% for person in client.related_people %}
+                <div class="related-person">
+                    <strong>{{ person.name }}</strong>
+                    <p>{{ person.relationship | capitalize }}</p>
+                    {% if person.phone %}<p>📞 {{ person.phone }}</p>{% endif %}
+                    {% if person.address %}<p>📍 {{ person.address }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No related people on file.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Clients — GVI NGO{% endblock %}
+{% block page_title %}Clients{% endblock %}
+
+{% block topbar_actions %}
+<a href="/clients/new" class="btn btn-primary">+ Add Client</a>
+{% endblock %}
+
+{% block extra_styles %}
+.filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    width: 260px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: var(--accent); }
+
+.filter-select {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+}
+
+.clients-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.count-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.name-link {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.name-link:hover { color: var(--accent); }
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search by name, address..." onkeyup="filterTable()">
+    <select class="filter-select" id="riskFilter" onchange="filterTable()">
+        <option value="">All Risk Levels</option>
+        <option value="Needs urgent help">Needs Urgent Help</option>
+        <option value="High risk">High Risk</option>
+        <option value="Low risk">Low Risk</option>
+        <option value="Not at risk">Not at Risk</option>
+        <option value="Threat to others">Threat to Others</option>
+        <option value="Threat to themselves">Threat to Themselves</option>
+    </select>
+    <select class="filter-select" id="statusFilter" onchange="filterTable()">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+    </select>
+    <span class="count-label" id="countLabel">{{ clients|length }} clients</span>
+</div>
+
+<div class="clients-table-wrap">
+    {% if clients %}
+    <table id="clientsTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Assigned To</th>
+                <th>Risk Level</th>
+                <th>Client Since</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr
+                data-risk="{{ client.risk_level }}"
+                data-status="{{ 'active' if client.is_active else 'inactive' }}"
+            >
+                <td>
+                    <a href="/clients/{{ client.contact_id }}" class="name-link">{{ client.name }}</a>
+                </td>
+                <td>{{ client.assigned_to or '—' }}</td>
+                <td>
+                    {% if client.risk_level == "Needs urgent help" %}
+                        <span class="badge badge-urgent">{{ client.risk_level }}</span>
+                    {% elif client.risk_level == "High risk" or client.risk_level == "Threat to others" or client.risk_level == "Threat to themselves" %}
+                        <span class="badge badge-high">{{ client.risk_level }}</span>
+                    {% elif client.risk_level == "Low risk" %}
+                        <span class="badge badge-low">{{ client.risk_level }}</span>
+                    {% else %}
+                        <span class="badge badge-none">{{ client.risk_level }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ client.client_since.strftime('%b %d, %Y') if client.client_since else '—' }}</td>
+                <td>
+                    {% if client.is_active %}
+                        <span class="badge badge-active">Active</span>
+                    {% else %}
+                        <span class="badge badge-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding: 60px 24px; color: var(--text-muted);">
+        <strong>No clients yet</strong>
+        <p style="margin-top: 8px; font-size: 0.875rem;">Add your first client to get started.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const risk = document.getElementById('riskFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const rows = document.querySelectorAll('#clientsTable tbody tr');
+    let visible = 0;
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const matchSearch = !search || text.includes(search);
+        const matchRisk = !risk || row.dataset.risk === risk;
+        const matchStatus = !status || row.dataset.status === status;
+        const show = matchSearch && matchRisk && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    document.getElementById('countLabel').textContent = `${visible} client${visible !== 1 ? 's' : ''}`;
+}
+</script>
+{% endblock %}
