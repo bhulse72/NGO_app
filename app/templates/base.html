@@ -265,6 +265,28 @@
                 <span class="icon">◧</span> SBPD CSV
             </a>
         </nav>
+        <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: auto;">
+            {% if current_user %}
+            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 8px;">
+                <div style="color: white; font-weight: 500;">{{ current_user.name }}</div>
+                <div style="font-size: 0.7rem; margin-top: 2px;">
+                    {% if current_user.is_admin %}
+                        <span style="color: #e07b39;">Admin</span>
+                        {% if current_user.is_social_worker %} · Social Worker{% endif %}
+                    {% else %}
+                        Social Worker
+                    {% endif %}
+                </div>
+            </div>
+            <form method="POST" action="/auth/logout">
+                <button type="submit" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; cursor: pointer; width: 100%; transition: all 0.15s;">
+                    Sign Out
+                </button>
+            </form>
+            {% else %}
+            <a href="/auth/login" style="color: rgba(255,255,255,0.6); font-size: 0.85rem; text-decoration: none;">Sign In</a>
+            {% endif %}
+        </div>
     </aside>
 
     <main class="main">

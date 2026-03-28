@@ -107,21 +107,61 @@
         </div>
 
         <!-- Contact attempts -->
-        <div class="card">
-            <div class="card-title">Contact Attempts</div>
-            {% if contact.contact_attempts %}
-                {% for attempt in contact.contact_attempts %}
-                <div class="attempt {{ 'success' if attempt.reached else 'fail' }}">
-                    <strong>{{ 'Reached' if attempt.reached else 'Not reached' }}</strong>
-                    via {{ attempt.reached_via }}
-                    {% if attempt.notes %} — {{ attempt.notes }}{% endif %}
-                    <div class="attempt-meta">{{ attempt.date.strftime('%b %d, %Y at %I:%M %p') }}</div>
+<div class="card">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        Contact Attempts
+        <button class="btn btn-primary" style="font-size: 0.75rem; padding: 5px 12px;" onclick="toggleAttemptForm()">+ Log Attempt</button>
+    </div>
+
+    <!-- Add attempt form -->
+    <div id="attemptForm" style="display: none; margin-bottom: 16px;">
+        <div style="background: var(--bg); border-radius: 8px; padding: 14px; border: 1px solid var(--border);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                <div>
+                    <label class="info-label" style="display: block; margin-bottom: 6px;">Was contact reached?</label>
+                    <select id="attemptReached" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: white; outline: none;">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p style="color: var(--text-muted); font-size: 0.875rem;">No contact attempts logged yet.</p>
-            {% endif %}
+                <div>
+                    <label class="info-label" style="display: block; margin-bottom: 6px;">Reached via</label>
+                    <select id="attemptVia" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: white; outline: none;">
+                        <option value="self">Self</option>
+                        <option value="mother">Mother</option>
+                        <option value="grandmother">Grandmother</option>
+                        <option value="father">Father</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label class="info-label" style="display: block; margin-bottom: 6px;">Notes (optional)</label>
+                <textarea id="attemptNotes" rows="2" placeholder="Any notes about this attempt..."
+                    style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: white; outline: none; resize: vertical;"></textarea>
+            </div>
+            <div id="attemptError" style="color: var(--danger); font-size: 0.8rem; margin-bottom: 8px; display: none;"></div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn btn-outline" style="font-size: 0.8rem; padding: 5px 12px;" onclick="toggleAttemptForm()">Cancel</button>
+                <button class="btn btn-primary" style="font-size: 0.8rem; padding: 5px 12px;" onclick="submitAttempt()">Save Attempt</button>
+            </div>
         </div>
+    </div>
+
+    <!-- Existing attempts -->
+    {% if contact.contact_attempts %}
+        {% for attempt in contact.contact_attempts %}
+        <div class="attempt {{ 'success' if attempt.reached else 'fail' }}">
+            <strong>{{ 'Reached' if attempt.reached else 'Not reached' }}</strong>
+            via {{ attempt.reached_via }}
+            {% if attempt.notes %} — {{ attempt.notes }}{% endif %}
+            <div class="attempt-meta">{{ attempt.date.strftime('%b %d, %Y at %I:%M %p') }}</div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-muted); font-size: 0.875rem;">No contact attempts logged yet.</p>
+    {% endif %}
+</div>
     </div>
 
     <!-- Right column -->
@@ -165,4 +205,31 @@
         </div>
     </div>
 </div>
+<script>
+    function toggleAttemptForm() {
+        const form = document.getElementById('attemptForm');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    async function submitAttempt() {
+        const reached = document.getElementById('attemptReached').value === 'true';
+        const reached_via = document.getElementById('attemptVia').value;
+        const notes = document.getElementById('attemptNotes').value.trim();
+        const errorEl = document.getElementById('attemptError');
+    
+        const res = await fetch('/contacts/{{ contact.contact_id }}/attempts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reached, reached_via, notes: notes || null })
+        });
+    
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const data = await res.json();
+            errorEl.textContent = data.error || 'Something went wrong.';
+            errorEl.style.display = 'block';
+        }
+    }
+    </script>
 {% endblock %}

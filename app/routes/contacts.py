@@ -88,3 +88,19 @@ def new_contact():
     from app.services.sheets_service import load_all_social_workers
     workers = load_all_social_workers()
     return render_template("contacts/new.html", workers=workers)
+
+@contacts_bp.route("/<contact_id>/attempts", methods=["POST"])
+def add_contact_attempt(contact_id):
+    from app.services.sheets_service import save_contact_attempt, _cache
+    from app.models.contact import ContactAttempt
+    data = request.get_json()
+
+    attempt = ContactAttempt(
+        date=datetime.now(),
+        reached=data["reached"],
+        reached_via=data["reached_via"],
+        notes=data.get("notes")
+    )
+    save_contact_attempt(contact_id, attempt)
+    _cache.pop("contacts", None)
+    return jsonify({"message": "Contact attempt logged"}), 201
