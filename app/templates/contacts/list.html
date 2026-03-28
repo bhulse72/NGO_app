@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts — GVI NGO{% endblock %}
+{% block page_title %}Contacts{% endblock %}
+
+{% block topbar_actions %}
+<a href="/contacts/new" class="btn btn-primary">+ Add Contact</a>
+{% endblock %}
+
+{% block extra_styles %}
+.filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    width: 260px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: var(--accent); }
+
+.filter-select {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+}
+
+.contacts-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.count-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.name-link {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.name-link:hover { color: var(--accent); }
+
+.source-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    background: #eef0f8;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.source-pill.sbpd { background: #dbeafe; color: #1d4ed8; }
+.source-pill.jjc { background: #ede9fe; color: #6d28d9; }
+.source-pill.walk-in { background: #dcfce7; color: #166534; }
+
+.empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+}
+
+.empty-state p { margin-top: 8px; font-size: 0.875rem; }
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+    <input
+        type="text"
+        class="search-input"
+        id="searchInput"
+        placeholder="Search by name, phone, address..."
+        onkeyup="filterTable()"
+    >
+    <select class="filter-select" id="sourceFilter" onchange="filterTable()">
+        <option value="">All Sources</option>
+        {% set sources = contacts | map(attribute='referral_source') | unique | list %}
+        {% for source in sources %}
+        <option value="{{ source }}">{{ source }}</option>
+        {% endfor %}
+    </select>
+    <select class="filter-select" id="reachedFilter" onchange="filterTable()">
+        <option value="">All Statuses</option>
+        <option value="reached">Reached</option>
+        <option value="not-reached">Not Reached</option>
+    </select>
+    <span class="count-label" id="countLabel">{{ contacts|length }} contacts</span>
+</div>
+
+<div class="contacts-table-wrap">
+    {% if contacts %}
+    <table id="contactsTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Source</th>
+                <th>Referral Date</th>
+                <th>Reached</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contact in contacts %}
+            <tr
+                data-source="{{ contact.referral_source }}"
+                data-reached="{{ 'reached' if contact.was_reached() else 'not-reached' }}"
+            >
+                <td>
+                    <a href="/contacts/{{ contact.contact_id }}" class="name-link">
+                        {{ contact.name }}
+                    </a>
+                </td>
+                <td>{{ contact.phone or '—' }}</td>
+                <td>{{ contact.address or '—' }}</td>
+                <td>
+                    {% set src = contact.referral_source | lower %}
+                    {% if 'sbpd' in src or 'police' in src %}
+                        <span class="source-pill sbpd">{{ contact.referral_source }}</span>
+                    {% elif 'jjc' in src %}
+                        <span class="source-pill jjc">{{ contact.referral_source }}</span>
+                    {% elif 'walk' in src %}
+                        <span class="source-pill walk-in">{{ contact.referral_source }}</span>
+                    {% else %}
+                        <span class="source-pill">{{ contact.referral_source }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ contact.referral_date.strftime('%b %d, %Y') if contact.referral_date else '—' }}</td>
+                <td>
+                    {% if contact.was_reached() %}
+                        <span class="badge badge-active">✓ Yes</span>
+                    {% else %}
+                        <span class="badge badge-inactive">✗ No</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <strong>No contacts yet</strong>
+        <p>Add your first contact to get started.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const source = document.getElementById('sourceFilter').value;
+    const reached = document.getElementById('reachedFilter').value;
+    const rows = document.querySelectorAll('#contactsTable tbody tr');
+    let visible = 0;
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const rowSource = row.dataset.source;
+        const rowReached = row.dataset.reached;
+
+        const matchSearch = !search || text.includes(search);
+        const matchSource = !source || rowSource === source;
+        const matchReached = !reached || rowReached === reached;
+
+        const show = matchSearch && matchSource && matchReached;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    document.getElementById('countLabel').textContent = `${visible} contact${visible !== 1 ? 's' : ''}`;
+}
+</script>
+{% endblock %}

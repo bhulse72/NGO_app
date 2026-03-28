@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}{{ contact.name }} — GVI NGO{% endblock %}
+{% block page_title %}{{ contact.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/contacts/" class="btn btn-outline">← Back to Contacts</a>
+{% endblock %}
+
+{% block extra_styles %}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.info-value {
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.related-person {
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.related-person strong {
+    font-size: 0.875rem;
+}
+
+.related-person p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.attempt {
+    padding: 10px 12px;
+    border-left: 3px solid var(--border);
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+}
+
+.attempt.success { border-left-color: var(--success); }
+.attempt.fail { border-left-color: var(--danger); }
+
+.attempt-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+    <!-- Left column -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Basic info -->
+        <div class="card">
+            <div class="card-title">Contact Information</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px;">
+                <div class="info-row">
+                    <span class="info-label">Full Name</span>
+                    <span class="info-value">{{ contact.name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date of Birth</span>
+                    <span class="info-value">{{ contact.date_of_birth.strftime('%b %d, %Y') if contact.date_of_birth else '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">{{ contact.phone or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Address</span>
+                    <span class="info-value">{{ contact.address or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Referral Source</span>
+                    <span class="info-value">{{ contact.referral_source or '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Referral Date</span>
+                    <span class="info-value">{{ contact.referral_date.strftime('%b %d, %Y') if contact.referral_date else '—' }}</span>
+                </div>
+                <div class="info-row" style="grid-column: span 2;">
+                    <span class="info-label">Reason for Referral</span>
+                    <span class="info-value">{{ contact.referral_description or '—' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact attempts -->
+        <div class="card">
+            <div class="card-title">Contact Attempts</div>
+            {% if contact.contact_attempts %}
+                {% for attempt in contact.contact_attempts %}
+                <div class="attempt {{ 'success' if attempt.reached else 'fail' }}">
+                    <strong>{{ 'Reached' if attempt.reached else 'Not reached' }}</strong>
+                    via {{ attempt.reached_via }}
+                    {% if attempt.notes %} — {{ attempt.notes }}{% endif %}
+                    <div class="attempt-meta">{{ attempt.date.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No contact attempts logged yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Status -->
+        <div class="card">
+            <div class="card-title">Status</div>
+            <div class="info-row">
+                <span class="info-label">Reachability</span>
+                {% if contact.was_reached() %}
+                    <span class="badge badge-active">✓ Reached</span>
+                {% else %}
+                    <span class="badge badge-inactive">✗ Not Reached</span>
+                {% endif %}
+            </div>
+            <div class="info-row">
+                <span class="info-label">Added By</span>
+                <span class="info-value">{{ contact.added_by or '—' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date Added</span>
+                <span class="info-value">{{ contact.date_added.strftime('%b %d, %Y') }}</span>
+            </div>
+        </div>
+
+        <!-- Related people -->
+        <div class="card">
+            <div class="card-title">Related People</div>
+            {% if contact.related_people %}
+                {% for person in contact.related_people %}
+                <div class="related-person">
+                    <strong>{{ person.name }}</strong>
+                    <p>{{ person.relationship | capitalize }}</p>
+                    {% if person.phone %}<p>📞 {{ person.phone }}</p>{% endif %}
+                    {% if person.address %}<p>📍 {{ person.address }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No related people on file.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
