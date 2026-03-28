@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Add Contact — GVI NGO{% endblock %}
+{% block page_title %}Add Contact{% endblock %}
+
+{% block topbar_actions %}
+<a href="/contacts/" class="btn btn-outline">← Back to Contacts</a>
+{% endblock %}
+
+{% block extra_styles %}
+.form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.form-label .required { color: var(--danger); margin-left: 2px; }
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    background: white;
+}
+
+.form-textarea { resize: vertical; min-height: 80px; }
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.related-person-entry {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.remove-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.remove-btn:hover { color: var(--danger); background: #fde8e8; }
+
+.duplicate-warning {
+    background: #fef3e2;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+    color: #92400e;
+    display: none;
+}
+
+.error-banner {
+    background: #fde8e8;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+    color: var(--danger);
+    display: none;
+}
+{% endblock %}
+
+{% block content %}
+<div class="form-grid">
+    <!-- Main form -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <div id="duplicateWarning" class="duplicate-warning"></div>
+        <div id="errorBanner" class="error-banner"></div>
+
+        <!-- Basic info -->
+        <div class="card">
+            <div class="section-title">Basic Information</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Full Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="name" placeholder="First Last" onblur="checkDuplicates()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-input" id="dob">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-input" id="phone" placeholder="555-1234">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" class="form-input" id="address" placeholder="123 Main St, South Bend, IN">
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral info -->
+        <div class="card">
+            <div class="section-title">Referral Information</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Referral Source <span class="required">*</span></label>
+                    <select class="form-select" id="referralSource">
+                        <option value="">Select source...</option>
+                        <option value="SBPD">SBPD</option>
+                        <option value="JJC">JJC</option>
+                        <option value="Walk-in">Walk-in</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Referral Date <span class="required">*</span></label>
+                    <input type="date" class="form-input" id="referralDate">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Reason for Referral</label>
+                <textarea class="form-textarea" id="referralDescription" placeholder="Describe the reason for referral..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Added By <span class="required">*</span></label>
+                <select class="form-select" id="addedBy">
+                    <option value="">Select worker...</option>
+                    {% for worker in workers %}
+                    <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Related people -->
+        <div class="card">
+            <div class="section-title">Related People</div>
+            <div id="relatedPeopleList"></div>
+            <button type="button" class="btn btn-outline" onclick="addRelatedPerson()">+ Add Related Person</button>
+        </div>
+
+        <!-- Submit -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <a href="/contacts/" class="btn btn-outline">Cancel</a>
+            <button class="btn btn-primary" onclick="submitContact(false)">Save Contact</button>
+        </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card">
+            <div class="section-title">Tips</div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
+                • Fields marked <span style="color: var(--danger);">*</span> are required.<br><br>
+                • The system will warn you if a similar name already exists.<br><br>
+                • Add mother, grandmother, or other family members under Related People to help with outreach.<br><br>
+                • You can convert this contact to a client later from their detail page.
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="section-title">Duplicate Check</div>
+            <div id="duplicateList" style="font-size: 0.85rem; color: var(--text-muted);">
+                Enter a name to check for duplicates.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let relatedCount = 0;
+
+// Set today as default referral date
+document.getElementById('referralDate').valueAsDate = new Date();
+
+function addRelatedPerson() {
+    relatedCount++;
+    const div = document.createElement('div');
+    div.className = 'related-person-entry';
+    div.id = `related-${relatedCount}`;
+    div.innerHTML = `
+        <button class="remove-btn" onclick="removeRelated(${relatedCount})">✕</button>
+        <div class="form-row" style="margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="rel-name-${relatedCount}" placeholder="Full name">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Relationship</label>
+                <select class="form-select" id="rel-rel-${relatedCount}">
+                    <option value="mother">Mother</option>
+                    <option value="grandmother">Grandmother</option>
+                    <option value="father">Father</option>
+                    <option value="grandfather">Grandfather</option>
+                    <option value="sibling">Sibling</option>
+                    <option value="uncle">Uncle</option>
+                    <option value="aunt">Aunt</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-input" id="rel-phone-${relatedCount}" placeholder="555-1234">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-input" id="rel-addr-${relatedCount}" placeholder="Address">
+            </div>
+        </div>
+    `;
+    document.getElementById('relatedPeopleList').appendChild(div);
+}
+
+function removeRelated(id) {
+    document.getElementById(`related-${id}`).remove();
+}
+
+async function checkDuplicates() {
+    const name = document.getElementById('name').value.trim();
+    if (!name) return;
+
+    const res = await fetch('/contacts/?format=json');
+    const contacts = await res.json();
+    const similar = contacts.filter(c =>
+        c.name.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(c.name.toLowerCase())
+    );
+
+    const listEl = document.getElementById('duplicateList');
+    const warningEl = document.getElementById('duplicateWarning');
+
+    if (similar.length > 0) {
+        listEl.innerHTML = similar.map(c =>
+            `<a href="/contacts/${c.contact_id}" target="_blank"
+                style="display:block; padding: 6px 8px; border-radius:4px; text-decoration:none; color: var(--text); background: var(--bg); margin-bottom: 4px; font-size: 0.8rem;">
+                ${c.name} <span style="color: var(--text-muted);">· ${c.referral_source}</span>
+            </a>`
+        ).join('');
+        warningEl.textContent = `⚠️ ${similar.length} similar contact(s) found. Please review before saving.`;
+        warningEl.style.display = 'block';
+    } else {
+        listEl.textContent = 'No similar contacts found.';
+        warningEl.style.display = 'none';
+    }
+}
+
+function generateId() {
+    return 'c' + Date.now().toString().slice(-6);
+}
+
+async function submitContact(force = false) {
+    const name = document.getElementById('name').value.trim();
+    const referralSource = document.getElementById('referralSource').value;
+    const referralDate = document.getElementById('referralDate').value;
+    const addedBy = document.getElementById('addedBy').value;
+    const errorEl = document.getElementById('errorBanner');
+
+    if (!name || !referralSource || !referralDate || !addedBy) {
+        errorEl.textContent = 'Please fill in all required fields.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    // Collect related people
+    const relatedPeople = [];
+    document.querySelectorAll('.related-person-entry').forEach(entry => {
+        const id = entry.id.split('-')[1];
+        const relName = document.getElementById(`rel-name-${id}`).value.trim();
+        if (relName) {
+            relatedPeople.push({
+                name: relName,
+                relationship: document.getElementById(`rel-rel-${id}`).value,
+                phone: document.getElementById(`rel-phone-${id}`).value.trim(),
+                address: document.getElementById(`rel-addr-${id}`).value.trim()
+            });
+        }
+    });
+
+    const payload = {
+        contact_id: generateId(),
+        name,
+        date_of_birth: document.getElementById('dob').value || null,
+        phone: document.getElementById('phone').value.trim() || null,
+        address: document.getElementById('address').value.trim() || null,
+        referral_source: referralSource,
+        referral_date: referralDate,
+        referral_description: document.getElementById('referralDescription').value.trim() || null,
+        added_by: addedBy,
+        related_people: relatedPeople
+    };
+
+    const res = await fetch('/contacts/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (res.status === 409 && !force) {
+        errorEl.textContent = `⚠️ Similar contacts exist: ${data.similar_names.join(', ')}. Save anyway?`;
+        errorEl.style.display = 'block';
+        // Add a "Save Anyway" button
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.style.marginTop = '8px';
+        btn.textContent = 'Save Anyway';
+        btn.onclick = () => submitContact(true);
+        errorEl.appendChild(document.createElement('br'));
+        errorEl.appendChild(btn);
+        return;
+    }
+
+    if (res.ok) {
+        window.location.href = `/contacts/${data.contact_id}`;
+    } else {
+        errorEl.textContent = data.error || 'Something went wrong.';
+        errorEl.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

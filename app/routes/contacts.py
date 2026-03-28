@@ -57,6 +57,7 @@ def add_contact():
     similar = [c.name for c in existing if data["name"].lower() in c.name.lower() or c.name.lower() in data["name"].lower()]
     if similar:
         return jsonify({"warning": "Similar contacts already exist", "similar_names": similar}), 409
+
     contact = Contact(
         contact_id=data["contact_id"],
         name=data["name"],
@@ -69,5 +70,21 @@ def add_contact():
         added_by=data.get("added_by"),
         photo=data.get("photo")
     )
+
+    # Add related people from payload
+    for rp in data.get("related_people", []):
+        contact.add_related_person(
+            name=rp["name"],
+            relationship=rp["relationship"],
+            phone=rp.get("phone"),
+            address=rp.get("address")
+        )
+
     save_contact(contact)
     return jsonify({"message": "Contact added successfully", "contact_id": contact.contact_id}), 201
+
+@contacts_bp.route("/new", methods=["GET"])
+def new_contact():
+    from app.services.sheets_service import load_all_social_workers
+    workers = load_all_social_workers()
+    return render_template("contacts/new.html", workers=workers)
