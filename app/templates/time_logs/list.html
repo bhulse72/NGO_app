@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Time Logs — GVI NGO{% endblock %}
+{% block page_title %}Time Logs{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="openModal()">+ Log Time</button>
+{% endblock %}
+
+{% block extra_styles %}
+.filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    width: 220px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: var(--accent); }
+
+.filter-select {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+}
+
+.count-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.logs-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+}
+
+.summary-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.summary-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 28px;
+    width: 480px;
+    max-width: 95vw;
+}
+
+.modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+
+.categories-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cat-toggle {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.cat-toggle.selected {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+{% set total_hours = logs | sum(attribute='hours') %}
+<div class="summary-grid">
+    <div class="summary-card">
+        <div class="summary-label">Total Hours Logged</div>
+        <div class="summary-value">{{ total_hours | round(1) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Total Entries</div>
+        <div class="summary-value">{{ logs | length }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Active Workers</div>
+        <div class="summary-value">{{ workers | length }}</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search description..." onkeyup="filterTable()">
+    <select class="filter-select" id="workerFilter" onchange="filterTable()">
+        <option value="">All Workers</option>
+        {% for worker in workers %}
+        <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+        {% endfor %}
+    </select>
+    <select class="filter-select" id="categoryFilter" onchange="filterTable()">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+    </select>
+    <span class="count-label" id="countLabel">{{ logs | length }} entries</span>
+</div>
+
+<!-- Table -->
+<div class="logs-table-wrap">
+    {% if logs %}
+    <table id="logsTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Worker</th>
+                <th>Hours</th>
+                <th>Categories</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr data-worker="{{ log.worker_id }}" data-categories="{{ log.categories | join(',') }}">
+                <td>{{ log.date.strftime('%b %d, %Y') }}</td>
+                <td>{{ log.worker_name }}</td>
+                <td><strong>{{ log.hours }}h</strong></td>
+                <td>
+                    {% for cat in log.categories %}
+                        <span class="badge badge-none" style="font-size: 0.7rem; margin-right: 4px;">{{ cat }}</span>
+                    {% endfor %}
+                </td>
+                <td style="color: var(--text-muted);">{{ log.description or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding: 60px 24px; color: var(--text-muted);">
+        <strong>No time logs yet</strong>
+        <p style="margin-top: 8px; font-size: 0.875rem;">Click "Log Time" to add your first entry.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Log Time Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+        <div class="modal-title">Log Time</div>
+
+        <div class="form-group">
+            <label class="form-label">Social Worker</label>
+            <select class="form-select" id="modalWorker">
+                {% for worker in workers %}
+                <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Hours</label>
+            <input type="number" class="form-input" id="modalHours" step="0.5" min="0.5" placeholder="e.g. 1.5">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="modalDate">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Categories</label>
+            <div class="categories-wrap" id="categoriesWrap">
+                {% for cat in categories %}
+                <span class="cat-toggle" onclick="toggleCategory(this)">{{ cat }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Description (optional)</label>
+            <input type="text" class="form-input" id="modalDescription" placeholder="Brief description of work done">
+        </div>
+
+        <div id="modalError" style="color: var(--danger); font-size: 0.8rem; display: none;"></div>
+
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitLog()">Save Log</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('modalDate').valueAsDate = new Date();
+
+function openModal() {
+    document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.getElementById('modalError').style.display = 'none';
+}
+
+function closeModalOnOverlay(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function toggleCategory(el) {
+    el.classList.toggle('selected');
+}
+
+async function submitLog() {
+    const worker_id = document.getElementById('modalWorker').value;
+    const hours = parseFloat(document.getElementById('modalHours').value);
+    const date = document.getElementById('modalDate').value;
+    const description = document.getElementById('modalDescription').value;
+    const categories = [...document.querySelectorAll('.cat-toggle.selected')].map(el => el.textContent);
+
+    const errorEl = document.getElementById('modalError');
+
+    if (!hours || hours <= 0) {
+        errorEl.textContent = 'Please enter valid hours.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    if (categories.length === 0) {
+        errorEl.textContent = 'Please select at least one category.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const res = await fetch('/time_logs/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ worker_id, hours, date, categories, description })
+    });
+
+    if (res.ok) {
+        window.location.reload();
+    } else {
+        const data = await res.json();
+        errorEl.textContent = data.error || 'Something went wrong.';
+        errorEl.style.display = 'block';
+    }
+}
+
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const worker = document.getElementById('workerFilter').value;
+    const category = document.getElementById('categoryFilter').value;
+    const rows = document.querySelectorAll('#logsTable tbody tr');
+    let visible = 0;
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const matchSearch = !search || text.includes(search);
+        const matchWorker = !worker || row.dataset.worker === worker;
+        const matchCat = !category || row.dataset.categories.includes(category);
+        const show = matchSearch && matchWorker && matchCat;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    document.getElementById('countLabel').textContent = `${visible} entr${visible !== 1 ? 'ies' : 'y'}`;
+}
+</script>
+{% endblock %}
