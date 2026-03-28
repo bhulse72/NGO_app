@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}SBPD Report — GVI NGO{% endblock %}
+{% block page_title %}SBPD CSV Report{% endblock %}
+
+{% block topbar_actions %}
+<a href="/reports/sbpd?format=csv" class="btn btn-primary">⬇ Download CSV</a>
+{% endblock %}
+
+{% block extra_styles %}
+.info-banner {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 0.875rem;
+    color: #1d4ed8;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sbpd-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.manual-field {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.8rem;
+}
+{% endblock %}
+
+{% block content %}
+
+<div class="info-banner">
+    ℹ️ This report covers all contacts referred by SBPD. Fields marked "fill manually" are left blank in the CSV and should be completed before submission. The police department expects this within 2 days of referral.
+</div>
+
+<div class="sbpd-table-wrap">
+    {% if contacts %}
+    <table>
+        <thead>
+            <tr>
+                <th>Contact Name</th>
+                <th>Date Attempted</th>
+                <th>Modified By</th>
+                <th>Contact Status</th>
+                <th>If Reached, With Whom</th>
+                <th>Address Correct?</th>
+                <th>Detroit-Style Custom?</th>
+                <th>Retaliation Concerns?</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contact in contacts %}
+            {% set last_attempt = contact.contact_attempts | sort(attribute='date', reverse=True) | first if contact.contact_attempts else None %}
+            <tr>
+                <td><strong>{{ contact.name }}</strong></td>
+                <td>{{ last_attempt.date.strftime('%b %d, %Y') if last_attempt else '—' }}</td>
+                <td>{{ contact.added_by or '—' }}</td>
+                <td>
+                    {% if contact.was_reached() %}
+                        <span class="badge badge-active">Yes</span>
+                    {% else %}
+                        <span class="badge badge-inactive">No</span>
+                    {% endif %}
+                </td>
+                <td>{{ last_attempt.reached_via if last_attempt and last_attempt.reached else '—' }}</td>
+                <td>{{ contact.address or '—' }}</td>
+                <td><span class="manual-field">fill manually</span></td>
+                <td><span class="manual-field">fill manually</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding: 60px 24px; color: var(--text-muted);">
+        <strong>No SBPD referrals found</strong>
+        <p style="margin-top: 8px; font-size: 0.875rem;">Contacts referred by SBPD will appear here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

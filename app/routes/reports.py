@@ -232,3 +232,52 @@ def generate_sources_pdf(rows, period):
     doc.build(elements)
     buffer.seek(0)
     return send_file(buffer, mimetype="application/pdf", as_attachment=True, download_name=f"sources_report_{period}.pdf")
+
+@reports_bp.route("/sbpd", methods=["GET"])
+def sbpd_report():
+    contacts = load_all_contacts()
+
+    # Only SBPD referred contacts
+    sbpd_contacts = [c for c in contacts if c.referral_source and "sbpd" in c.referral_source.lower()]
+
+    if request.args.get("format") == "csv":
+        return generate_sbpd_csv(sbpd_contacts)
+
+    return render_template("reports/sbpd.html", contacts=sbpd_contacts)
+
+
+def generate_sbpd_csv(contacts):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    writer.writerow([
+        "Contact Name",
+        "Date Contact Attempted",
+        "LastModifiedByUser",
+        "Contact Status (Yes/No)",
+        "If Contact Made, with whom",
+        "Is Address provided by SBPD correct? If not, provide correct address",
+        "Candidate for Detroit-Style Custom?",
+        "Any Retaliation Concerns?"
+    ])
+
+    for contact in contacts:
+        last_attempt = sorted(contact.contact_attempts, key=lambda a: a.date, reverse=True)[0] if contact.contact_attempts else None
+        writer.writerow([
+            contact.name,
+            last_attempt.date.strftime("%Y-%m-%d") if last_attempt else "",
+            contact.added_by or "",
+            "Yes" if contact.was_reached() else "No",
+            last_attempt.reached_via if last_attempt and last_attempt.reached else "",
+            contact.address or "",
+            "",  # Candidate for Detroit-Style Custom — filled manually
+            ""   # Retaliation Concerns — filled manually
+        ])
+
+    buffer.seek(0)
+    return send_file(
+        io.BytesIO(buffer.getvalue().encode()),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"sbpd_report_{datetime.now().strftime('%Y-%m-%d')}.csv"
+    )
