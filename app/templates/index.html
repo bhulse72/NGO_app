@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — GVI NGO{% endblock %}
+
+{% block extra_styles %}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+}
+
+.stat-card.danger::before { background: var(--danger); }
+.stat-card.success::before { background: var(--success); }
+.stat-card.muted::before { background: var(--text-muted); }
+
+.stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    color: var(--text);
+    line-height: 1;
+}
+
+.stat-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.source-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    background: #eef0f8;
+    color: var(--text);
+    font-weight: 500;
+}
+{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Contacts</div>
+        <div class="stat-value">{{ stats.total_contacts }}</div>
+        <div class="stat-sub">All referred individuals</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-label">Total Clients</div>
+        <div class="stat-value">{{ stats.total_clients }}</div>
+        <div class="stat-sub">Cases accepted</div>
+    </div>
+    <div class="stat-card muted">
+        <div class="stat-label">Active Clients</div>
+        <div class="stat-value">{{ stats.active_clients }}</div>
+        <div class="stat-sub">Currently active</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-label">Urgent</div>
+        <div class="stat-value">{{ stats.urgent_clients }}</div>
+        <div class="stat-sub">Needs urgent help</div>
+    </div>
+</div>
+
+<!-- Recent tables -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">Recent Contacts</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Source</th>
+                    <th>Reached</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in recent_contacts %}
+                <tr>
+                    <td>{{ contact.name }}</td>
+                    <td><span class="source-pill">{{ contact.referral_source }}</span></td>
+                    <td>
+                        {% if contact.was_reached() %}
+                            <span class="badge badge-active">✓ Yes</span>
+                        {% else %}
+                            <span class="badge badge-inactive">✗ No</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="color: var(--text-muted); text-align:center;">No contacts yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Recent Clients</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Risk Level</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in recent_clients %}
+                <tr>
+                    <td>{{ client.name }}</td>
+                    <td>
+                        {% if client.risk_level == "Needs urgent help" %}
+                            <span class="badge badge-urgent">{{ client.risk_level }}</span>
+                        {% elif client.risk_level == "High risk" %}
+                            <span class="badge badge-high">{{ client.risk_level }}</span>
+                        {% elif client.risk_level == "Low risk" %}
+                            <span class="badge badge-low">{{ client.risk_level }}</span>
+                        {% else %}
+                            <span class="badge badge-none">{{ client.risk_level }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if client.is_active %}
+                            <span class="badge badge-active">Active</span>
+                        {% else %}
+                            <span class="badge badge-inactive">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="color: var(--text-muted); text-align:center;">No clients yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 
 def create_app():
     app = Flask(__name__)
@@ -14,6 +14,21 @@ def create_app():
 
     @app.route("/")
     def index():
-        return "NGO app is running!"
+        from app.services.sheets_service import load_all_contacts, load_all_clients, load_all_social_workers
+        contacts = load_all_contacts()
+        clients = load_all_clients()
+        workers = load_all_social_workers()
+
+        stats = {
+            "total_contacts": len(contacts),
+            "total_clients": len(clients),
+            "active_clients": len([c for c in clients if c.is_active]),
+            "urgent_clients": len([c for c in clients if c.risk_level == "Needs urgent help"]),
+        }
+
+        recent_contacts = sorted(contacts, key=lambda c: c.date_added, reverse=True)[:5]
+        recent_clients = sorted(clients, key=lambda c: c.client_since, reverse=True)[:5]
+
+        return render_template("index.html", stats=stats, recent_contacts=recent_contacts, recent_clients=recent_clients, workers=workers)
 
     return app
