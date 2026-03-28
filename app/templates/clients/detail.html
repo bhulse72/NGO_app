@@ -120,24 +120,53 @@
         </div>
 
         <!-- Notes -->
-        <div class="card">
-            <div class="card-title">Notes</div>
-            {% if client.notes %}
-                {% for note in client.get_notes() %}
-                <div class="note">
-                    <div class="note-text">{{ note.text }}</div>
-                    <div class="note-meta">
-                        By {{ note.author }} · {{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}
-                        {% if note.attachments %}
-                            · 📎 {{ note.attachments | length }} attachment(s)
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p style="color: var(--text-muted); font-size: 0.875rem;">No notes yet.</p>
-            {% endif %}
+<div class="card">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        Notes
+        <button class="btn btn-primary" style="font-size: 0.75rem; padding: 5px 12px;" onclick="toggleNoteForm()">+ Add Note</button>
+    </div>
+
+    <!-- Add note form -->
+    <div id="noteForm" style="display: none; margin-bottom: 16px;">
+        <div style="background: var(--bg); border-radius: 8px; padding: 14px; border: 1px solid var(--border);">
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label class="info-label" style="display: block; margin-bottom: 6px;">Author</label>
+                <select id="noteAuthor" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: white; outline: none;">
+                    {% for worker in workers %}
+                    <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label class="info-label" style="display: block; margin-bottom: 6px;">Note</label>
+                <textarea id="noteText" rows="3" placeholder="Write your note here..."
+                    style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: white; outline: none; resize: vertical;"></textarea>
+            </div>
+            <div id="noteError" style="color: var(--danger); font-size: 0.8rem; margin-bottom: 8px; display: none;"></div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn btn-outline" style="font-size: 0.8rem; padding: 5px 12px;" onclick="toggleNoteForm()">Cancel</button>
+                <button class="btn btn-primary" style="font-size: 0.8rem; padding: 5px 12px;" onclick="submitNote()">Save Note</button>
+            </div>
         </div>
+    </div>
+
+    <!-- Existing notes -->
+    {% if client.notes %}
+        {% for note in client.get_notes() %}
+        <div class="note">
+            <div class="note-text">{{ note.text }}</div>
+            <div class="note-meta">
+                By {{ note.author }} · {{ note.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                {% if note.attachments %}
+                    · 📎 {{ note.attachments | length }} attachment(s)
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p id="noNotesMsg" style="color: var(--text-muted); font-size: 0.875rem;">No notes yet.</p>
+    {% endif %}
+</div>
     </div>
 
     <!-- Right column -->
@@ -202,4 +231,39 @@
         </div>
     </div>
 </div>
+<script>
+    function toggleNoteForm() {
+        const form = document.getElementById('noteForm');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        if (form.style.display === 'block') {
+            document.getElementById('noteText').focus();
+        }
+    }
+    
+    async function submitNote() {
+        const author = document.getElementById('noteAuthor').value;
+        const text = document.getElementById('noteText').value.trim();
+        const errorEl = document.getElementById('noteError');
+    
+        if (!text) {
+            errorEl.textContent = 'Please write a note before saving.';
+            errorEl.style.display = 'block';
+            return;
+        }
+    
+        const res = await fetch('/clients/{{ client.contact_id }}/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ author, text })
+        });
+    
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const data = await res.json();
+            errorEl.textContent = data.error || 'Something went wrong.';
+            errorEl.style.display = 'block';
+        }
+    }
+    </script>
 {% endblock %}

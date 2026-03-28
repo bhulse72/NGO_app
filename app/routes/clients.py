@@ -3,6 +3,7 @@ from app.services.sheets_service import save_client, load_all_clients
 from app.models.client import Client
 from app.models.note import Note
 from datetime import datetime
+from app.services.sheets_service import save_client, load_all_clients, _cache
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
 
@@ -27,6 +28,7 @@ def list_clients():
 
 @clients_bp.route("/<contact_id>", methods=["GET"])
 def get_client(contact_id):
+    from app.services.sheets_service import load_all_social_workers
     clients = load_all_clients()
     client = next((c for c in clients if c.contact_id == contact_id), None)
     if not client:
@@ -52,7 +54,8 @@ def get_client(contact_id):
             "notes": [{"author": n.author, "text": n.text, "attachments": n.attachments, "created_at": n.created_at.strftime("%Y-%m-%d %H:%M:%S")} for n in client.get_notes()],
             "related_people": [{"name": p.name, "relationship": p.relationship, "phone": p.phone, "address": p.address} for p in client.related_people]
         })
-    return render_template("clients/detail.html", client=client)
+    workers = load_all_social_workers()
+    return render_template("clients/detail.html", client=client, workers=workers)
 
 
 @clients_bp.route("/", methods=["POST"])
@@ -109,14 +112,19 @@ def update_risk_level(contact_id):
 
 @clients_bp.route("/<contact_id>/notes", methods=["POST"])
 def add_note(contact_id):
+    from app.services.sheets_service import save_note
     data = request.get_json()
-    clients = load_all_clients()
-    client = next((c for c in clients if c.contact_id == contact_id), None)
-    if not client:
-        return jsonify({"error": "Client not found"}), 404
-    note = Note(author=data["author"], text=data["text"], attachments=data.get("attachments", []))
-    client.add_note(note)
-    save_client(client)
+
+    note = Note(
+        author=data["author"],
+        text=data["text"],
+        attachments=data.get("attachments", [])
+    )
+    save_note(contact_id, note)
+
+    # Invalidate cache so next load picks up the new note
+    _cache.pop("clients", None)
+
     return jsonify({"message": "Note added successfully"}), 201
 
 @clients_bp.route("/new", methods=["GET"])
