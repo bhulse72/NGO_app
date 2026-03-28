@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Social Workers — GVI NGO{% endblock %}
+{% block page_title %}Social Workers{% endblock %}
+
+{% block extra_styles %}
+.workers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.worker-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-decoration: none;
+    color: var(--text);
+    display: block;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+}
+
+.worker-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+}
+
+.worker-card.admin::before { background: var(--sidebar); }
+
+.worker-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.worker-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--sidebar);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+}
+
+.worker-avatar.admin { background: var(--accent); }
+
+.worker-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.worker-email {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+}
+
+.worker-stats {
+    display: flex;
+    gap: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.worker-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.worker-stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+}
+
+.worker-stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+}
+{% endblock %}
+
+{% block content %}
+<div class="workers-grid">
+    {% for worker in workers %}
+    <a href="/social_workers/{{ worker.worker_id }}" class="worker-card {{ 'admin' if worker.is_admin else '' }}">
+        <div class="worker-avatar {{ 'admin' if worker.is_admin else '' }}">
+            {{ worker.name[0] }}
+        </div>
+        <div class="worker-name">
+            {{ worker.name }}
+            {% if worker.is_admin %}
+                <span class="badge badge-high" style="font-size: 0.65rem; margin-left: 6px;">Admin</span>
+            {% endif %}
+        </div>
+        <div class="worker-email">{{ worker.email }}</div>
+        <div class="worker-stats">
+            <div class="worker-stat">
+                <span class="worker-stat-value">{{ worker.assigned_clients | length }}</span>
+                <span class="worker-stat-label">Clients</span>
+            </div>
+            <div class="worker-stat">
+                <span class="worker-stat-value">{{ worker.get_hours_by_category().values() | sum | round(1) }}</span>
+                <span class="worker-stat-label">Hours</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

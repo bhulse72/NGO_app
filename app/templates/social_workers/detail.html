@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ worker.name }} — GVI NGO{% endblock %}
+{% block page_title %}{{ worker.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/social_workers/" class="btn btn-outline">← Back to Social Workers</a>
+{% endblock %}
+
+{% block extra_styles %}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.info-value { font-size: 0.9rem; }
+
+.hours-bar-wrap {
+    margin-bottom: 14px;
+}
+
+.hours-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+}
+
+.hours-bar-track {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.hours-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.client-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin: 4px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s;
+}
+
+.client-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+    <!-- Worker info -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card">
+            <div class="card-title">Worker Information</div>
+            <div class="info-row">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">{{ worker.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ worker.email }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Role</span>
+                {% if worker.is_admin %}
+                    <span class="badge badge-high">Admin / Social Worker</span>
+                {% else %}
+                    <span class="badge badge-none">Social Worker</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Assigned clients -->
+        <div class="card">
+            <div class="card-title">Assigned Clients</div>
+            {% if worker.assigned_clients %}
+                {% for client_id in worker.assigned_clients %}
+                    <a href="/clients/{{ client_id }}" class="client-pill">{{ client_id }}</a>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No clients assigned yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Hours breakdown -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card">
+            <div class="card-title">Hours by Category</div>
+            {% set hours = worker.get_hours_by_category() %}
+            {% set total = hours.values() | sum %}
+            {% if hours %}
+                <div style="margin-bottom: 16px;">
+                    <span style="font-family: 'DM Serif Display', serif; font-size: 2rem;">{{ total | round(1) }}</span>
+                    <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 6px;">total hours</span>
+                </div>
+                {% for category, hrs in hours.items() %}
+                <div class="hours-bar-wrap">
+                    <div class="hours-bar-label">
+                        <span>{{ category }}</span>
+                        <span style="color: var(--text-muted);">{{ hrs }}h</span>
+                    </div>
+                    <div class="hours-bar-track">
+                        <div class="hours-bar-fill" style="width: {{ (hrs / total * 100) | round }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No time logged yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent logs -->
+        <div class="card">
+            <div class="card-title">Recent Time Logs</div>
+            {% if worker.time_logs %}
+                {% for log in worker.time_logs | sort(attribute='date', reverse=True) %}
+                <div style="padding: 10px 0; border-bottom: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span style="font-weight: 500;">{{ log.hours }}h</span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">{{ log.date.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    <div style="margin-top: 4px;">
+                        {% for cat in log.categories %}
+                            <span class="badge badge-none" style="font-size: 0.68rem;">{{ cat }}</span>
+                        {% endfor %}
+                    </div>
+                    {% if log.description %}
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">{{ log.description }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.875rem;">No time logs yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
