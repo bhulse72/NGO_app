@@ -238,6 +238,24 @@ def save_social_worker(worker: SocialWorker):
 def load_all_social_workers():
     sheet = get_sheet("Social_Workers")
     rows = sheet.get_all_records()
+
+    # Load time logs grouped by worker_id
+    logs_sheet = get_sheet("Time_Logs")
+    log_rows = logs_sheet.get_all_records()
+    logs_by_id = {}
+    for row in log_rows:
+        wid = row["worker_id"]
+        if wid not in logs_by_id:
+            logs_by_id[wid] = []
+        log = TimeLog(
+            worker_id=row["worker_id"],
+            hours=float(row["hours"]),
+            categories=row["categories"].split(",") if row["categories"] else [],
+            description=row["description"] or None,
+            date=datetime.strptime(row["date"], "%Y-%m-%d %H:%M:%S")
+        )
+        logs_by_id[wid].append(log)
+
     workers = []
     for row in rows:
         worker = SocialWorker(
@@ -247,6 +265,7 @@ def load_all_social_workers():
             is_admin=row["is_admin"] == "True"
         )
         worker.assigned_clients = row["assigned_clients"].split(",") if row["assigned_clients"] else []
+        worker.time_logs = logs_by_id.get(row["worker_id"], [])
         workers.append(worker)
     return workers
 

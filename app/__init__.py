@@ -5,8 +5,10 @@ def create_app():
 
     from app.routes.contacts import contacts_bp
     from app.routes.clients import clients_bp
+    from app.routes.social_workers import social_workers_bp
     app.register_blueprint(contacts_bp)
     app.register_blueprint(clients_bp)
+    app.register_blueprint(social_workers_bp)
 
     @app.route("/")
     def index():
