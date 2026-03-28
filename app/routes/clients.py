@@ -62,6 +62,7 @@ def add_client():
     similar = [c.name for c in existing if data["name"].lower() in c.name.lower() or c.name.lower() in data["name"].lower()]
     if similar:
         return jsonify({"warning": "Similar clients already exist", "similar_names": similar}), 409
+
     client = Client(
         contact_id=data["contact_id"],
         name=data["name"],
@@ -75,6 +76,18 @@ def add_client():
         assigned_to=data.get("assigned_to"),
         inactivity_days=data.get("inactivity_days", 90)
     )
+
+    if data.get("risk_level"):
+        client.set_risk_level(data["risk_level"])
+
+    for rp in data.get("related_people", []):
+        client.add_related_person(
+            name=rp["name"],
+            relationship=rp["relationship"],
+            phone=rp.get("phone"),
+            address=rp.get("address")
+        )
+
     save_client(client)
     return jsonify({"message": "Client added successfully", "contact_id": client.contact_id}), 201
 
@@ -105,3 +118,9 @@ def add_note(contact_id):
     client.add_note(note)
     save_client(client)
     return jsonify({"message": "Note added successfully"}), 201
+
+@clients_bp.route("/new", methods=["GET"])
+def new_client():
+    from app.services.sheets_service import load_all_social_workers
+    workers = load_all_social_workers()
+    return render_template("clients/new.html", workers=workers, risk_levels=Client.RISK_LEVELS)

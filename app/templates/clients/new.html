@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Add Client — GVI NGO{% endblock %}
+{% block page_title %}Add Client{% endblock %}
+
+{% block topbar_actions %}
+<a href="/clients/" class="btn btn-outline">← Back to Clients</a>
+{% endblock %}
+
+{% block extra_styles %}
+.form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.form-group { margin-bottom: 18px; }
+
+.form-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.form-label .required { color: var(--danger); margin-left: 2px; }
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    background: white;
+}
+
+.form-textarea { resize: vertical; min-height: 80px; }
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.risk-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.risk-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    background: var(--bg);
+    transition: all 0.15s;
+}
+
+.risk-option:hover { border-color: var(--accent); }
+.risk-option.selected { border-color: var(--accent); background: #fef3ec; font-weight: 500; }
+.risk-option input[type="radio"] { accent-color: var(--accent); }
+
+.related-person-entry {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.remove-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.remove-btn:hover { color: var(--danger); background: #fde8e8; }
+
+.duplicate-warning {
+    background: #fef3e2;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+    color: #92400e;
+    display: none;
+}
+
+.error-banner {
+    background: #fde8e8;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+    color: var(--danger);
+    display: none;
+}
+{% endblock %}
+
+{% block content %}
+<div class="form-grid">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <div id="duplicateWarning" class="duplicate-warning"></div>
+        <div id="errorBanner" class="error-banner"></div>
+
+        <!-- Basic info -->
+        <div class="card">
+            <div class="section-title">Basic Information</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Full Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="name" placeholder="First Last" onblur="checkDuplicates()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-input" id="dob">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-input" id="phone" placeholder="555-1234">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" class="form-input" id="address" placeholder="123 Main St, South Bend, IN">
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral info -->
+        <div class="card">
+            <div class="section-title">Referral Information</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Referral Source <span class="required">*</span></label>
+                    <select class="form-select" id="referralSource">
+                        <option value="">Select source...</option>
+                        <option value="SBPD">SBPD</option>
+                        <option value="JJC">JJC</option>
+                        <option value="Walk-in">Walk-in</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Referral Date <span class="required">*</span></label>
+                    <input type="date" class="form-input" id="referralDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason for Referral</label>
+                <textarea class="form-textarea" id="referralDescription" placeholder="Describe the reason for referral..."></textarea>
+            </div>
+        </div>
+
+        <!-- Case info -->
+        <div class="card">
+            <div class="section-title">Case Information</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Added By <span class="required">*</span></label>
+                    <select class="form-select" id="addedBy">
+                        <option value="">Select worker...</option>
+                        {% for worker in workers %}
+                        <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Assigned To <span class="required">*</span></label>
+                    <select class="form-select" id="assignedTo">
+                        <option value="">Select worker...</option>
+                        {% for worker in workers %}
+                        <option value="{{ worker.worker_id }}">{{ worker.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Inactivity Threshold (days)</label>
+                <input type="number" class="form-input" id="inactivityDays" value="90" min="1">
+            </div>
+        </div>
+
+        <!-- Related people -->
+        <div class="card">
+            <div class="section-title">Related People</div>
+            <div id="relatedPeopleList"></div>
+            <button type="button" class="btn btn-outline" onclick="addRelatedPerson()">+ Add Related Person</button>
+        </div>
+
+        <!-- Submit -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <a href="/clients/" class="btn btn-outline">Cancel</a>
+            <button class="btn btn-primary" onclick="submitClient()">Save Client</button>
+        </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- Risk level -->
+        <div class="card">
+            <div class="section-title">Risk Level <span class="required">*</span></div>
+            <div class="risk-options">
+                {% for level in risk_levels %}
+                <label class="risk-option" onclick="selectRisk(this)">
+                    <input type="radio" name="riskLevel" value="{{ level }}"
+                        {% if level == 'Not at risk' %}checked{% endif %}>
+                    {% if level == "Needs urgent help" %}🔴
+                    {% elif level in ["High risk", "Threat to others", "Threat to themselves"] %}🟠
+                    {% elif level == "Low risk" %}🟡
+                    {% else %}🟢
+                    {% endif %}
+                    {{ level }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Duplicate check -->
+        <div class="card">
+            <div class="section-title">Duplicate Check</div>
+            <div id="duplicateList" style="font-size: 0.85rem; color: var(--text-muted);">
+                Enter a name to check for duplicates.
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card">
+            <div class="section-title">Tips</div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
+                • A client is a contact whose case has been accepted.<br><br>
+                • Set the risk level carefully — urgent cases will appear on the dashboard.<br><br>
+                • The inactivity threshold controls when a client is automatically marked inactive.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+let relatedCount = 0;
+document.getElementById('referralDate').valueAsDate = new Date();
+
+// Highlight selected risk option on load
+document.querySelectorAll('.risk-option').forEach(opt => {
+    if (opt.querySelector('input[type="radio"]').checked) {
+        opt.classList.add('selected');
+    }
+});
+
+function selectRisk(el) {
+    document.querySelectorAll('.risk-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+}
+
+function addRelatedPerson() {
+    relatedCount++;
+    const div = document.createElement('div');
+    div.className = 'related-person-entry';
+    div.id = `related-${relatedCount}`;
+    div.innerHTML = `
+        <button class="remove-btn" onclick="removeRelated(${relatedCount})">✕</button>
+        <div class="form-row" style="margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="rel-name-${relatedCount}" placeholder="Full name">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Relationship</label>
+                <select class="form-select" id="rel-rel-${relatedCount}">
+                    <option value="mother">Mother</option>
+                    <option value="grandmother">Grandmother</option>
+                    <option value="father">Father</option>
+                    <option value="grandfather">Grandfather</option>
+                    <option value="sibling">Sibling</option>
+                    <option value="uncle">Uncle</option>
+                    <option value="aunt">Aunt</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-input" id="rel-phone-${relatedCount}" placeholder="555-1234">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-input" id="rel-addr-${relatedCount}" placeholder="Address">
+            </div>
+        </div>
+    `;
+    document.getElementById('relatedPeopleList').appendChild(div);
+}
+
+function removeRelated(id) {
+    document.getElementById(`related-${id}`).remove();
+}
+
+async function checkDuplicates() {
+    const name = document.getElementById('name').value.trim();
+    if (!name) return;
+
+    const res = await fetch('/clients/?format=json');
+    const clients = await res.json();
+    const similar = clients.filter(c =>
+        c.name.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(c.name.toLowerCase())
+    );
+
+    const listEl = document.getElementById('duplicateList');
+    const warningEl = document.getElementById('duplicateWarning');
+
+    if (similar.length > 0) {
+        listEl.innerHTML = similar.map(c =>
+            `<a href="/clients/${c.contact_id}" target="_blank"
+                style="display:block; padding: 6px 8px; border-radius:4px; text-decoration:none; color: var(--text); background: var(--bg); margin-bottom: 4px; font-size: 0.8rem;">
+                ${c.name} <span style="color: var(--text-muted);">· ${c.risk_level}</span>
+            </a>`
+        ).join('');
+        warningEl.textContent = `⚠️ ${similar.length} similar client(s) found. Please review before saving.`;
+        warningEl.style.display = 'block';
+    } else {
+        listEl.textContent = 'No similar clients found.';
+        warningEl.style.display = 'none';
+    }
+}
+
+function generateId() {
+    return 'cl' + Date.now().toString().slice(-6);
+}
+
+async function submitClient() {
+    const name = document.getElementById('name').value.trim();
+    const referralSource = document.getElementById('referralSource').value;
+    const referralDate = document.getElementById('referralDate').value;
+    const addedBy = document.getElementById('addedBy').value;
+    const assignedTo = document.getElementById('assignedTo').value;
+    const riskLevel = document.querySelector('input[name="riskLevel"]:checked')?.value;
+    const errorEl = document.getElementById('errorBanner');
+
+    if (!name || !referralSource || !referralDate || !addedBy || !assignedTo) {
+        errorEl.textContent = 'Please fill in all required fields.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const relatedPeople = [];
+    document.querySelectorAll('.related-person-entry').forEach(entry => {
+        const id = entry.id.split('-')[1];
+        const relName = document.getElementById(`rel-name-${id}`).value.trim();
+        if (relName) {
+            relatedPeople.push({
+                name: relName,
+                relationship: document.getElementById(`rel-rel-${id}`).value,
+                phone: document.getElementById(`rel-phone-${id}`).value.trim(),
+                address: document.getElementById(`rel-addr-${id}`).value.trim()
+            });
+        }
+    });
+
+    const payload = {
+        contact_id: generateId(),
+        name,
+        date_of_birth: document.getElementById('dob').value || null,
+        phone: document.getElementById('phone').value.trim() || null,
+        address: document.getElementById('address').value.trim() || null,
+        referral_source: referralSource,
+        referral_date: referralDate,
+        referral_description: document.getElementById('referralDescription').value.trim() || null,
+        added_by: addedBy,
+        assigned_to: assignedTo,
+        risk_level: riskLevel,
+        inactivity_days: parseInt(document.getElementById('inactivityDays').value) || 90,
+        related_people: relatedPeople
+    };
+
+    const res = await fetch('/clients/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (res.status === 409) {
+        errorEl.textContent = `⚠️ Similar clients exist: ${data.similar_names.join(', ')}. Save anyway?`;
+        errorEl.style.display = 'block';
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.style.marginTop = '8px';
+        btn.textContent = 'Save Anyway';
+        btn.onclick = submitClient;
+        errorEl.appendChild(document.createElement('br'));
+        errorEl.appendChild(btn);
+        return;
+    }
+
+    if (res.ok) {
+        window.location.href = `/clients/${data.contact_id}`;
+    } else {
+        errorEl.textContent = data.error || 'Something went wrong.';
+        errorEl.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}
